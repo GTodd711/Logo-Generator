@@ -1,26 +1,26 @@
 const inquirer = require('inquirer');
+const fs = require('fs');
+const shapes = require('./lib/shapes.js');
 
 function colorInput(input) {
-    // Check if the input is a valid color keyword or a hexadecimal number
     if (/^#[0-9A-F]{6}$/i.test(input) || ['Red', 'Blue', 'Green', 'Yellow', 'White', 'Black'].includes(input)) {
-      return true; // Input is valid
+        return true; 
     } else {
-      return 'Please enter a valid color keyword or hexadecimal number (e.g., #RRGGBB)';
+        return 'Please enter a valid color keyword or hexadecimal number (e.g., #RRGGBB)';
     }
-  }
-module.exports = colorInput;
+}
+
 
 inquirer.prompt([
     {
         type: 'input',
         name: 'text',
-        message: 'Enter text for logo.(only 3 characters or less)',
-        validate: colorInput,
+        message: 'Enter text for logo (only 3 characters or less):',
         validate: function(input) {
-            if (input.length <= 3 ){
+            if (input.length <= 3) {
                 return true;
             } else {
-                return 'please enter a mximum of three characters';
+                return 'Please enter a maximum of three characters';
             }
         }
     },
@@ -48,15 +48,44 @@ inquirer.prompt([
     console.log('Text Color:', answers.textColor);
     console.log('Shape:', answers.shape);
     console.log('Shape Color:', answers.shapeColor);
-});
 
-const logoData = `Text: ${answers.text}\nText Color: ${answers.textColor}\nShape: ${answers.shape}\nShape Color: ${answers.shapeColor}`;
+    const logoData = `Text: ${answers.text}\nText Color: ${answers.textColor}\nShape: ${answers.shape}\nShape Color: ${answers.shapeColor}`;
 
-    // Write the selected inputs to a file
-    fs.writeFile('generatedLogo.txt', logoData, (err) => {
-        if (err) {
-            console.error('Error writing file:', err);
+    function convertToSVG(data) {
+        const lines = data.split('\n');
+        const text = lines[0].split(': ')[1];
+        const textColor = lines[1].split(': ')[1];
+        const shape = lines[2].split(': ')[1];
+        const shapeColor = lines[3].split(': ')[1];
+    
+        let svgContent = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="300" height="200">`;
+    
+        if (shapes[shape]) {
+                 let svgShape = shapes[shape]
+                            .replace('%SHAPE_COLOR%', `fill="${shapeColor}"`)
+                            .replace('%TEXT_COLOR%', `fill="${textColor}"`);
+            svgShape = svgShape.replace('%TEXT%', `<text x="150" y="100" fill="${textColor}">${text}</text>`);
+            
+            svgContent += svgShape;
         } else {
-            console.log('Selected inputs saved to generatedLogo.txt');
+            console.error('Invalid shape specified');
         }
-    });
+    
+        svgContent += `</svg>`;
+    
+        return svgContent;
+    }
+
+    function writeSVGToFile(svgContent) {
+        fs.writeFile('generatedLogo.svg', svgContent, (err) => {
+            if (err) {
+                console.error('Error writing SVG file:', err);
+            } else {
+                console.log('SVG file generated successfully: generatedLogo.svg');
+            }
+        });
+    }
+
+    const svgContent = convertToSVG(logoData);
+    writeSVGToFile(svgContent);
+});
